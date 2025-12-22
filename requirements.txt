@@ -1,0 +1,22 @@
+# Kafka
+confluent-kafka==2.3.0
+
+# HTTP requests
+requests==2.31.0
+
+# Data processing
+pandas==2.1.4
+numpy==1.26.2
+
+# Visualization
+seaborn==0.13.0
+matplotlib==3.8.2
+
+# Spark (will be installed in Docker, but useful for local development)
+pyspark==3.5.0
+
+# Delta Lake
+delta-spark==3.0.0
+
+# Utilities
+python-dotenv==1.0.0
