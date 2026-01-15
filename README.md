@@ -20,7 +20,7 @@ docker-compose up -d
 This starts:
 - Zookeeper (port 2181)
 - Kafka (port 9092)
-- Kafka UI (http://localhost:8080)
+- Kafka UI (http://localhost:8082)
 
 ### 3. Test Hacker News API Client
 
@@ -58,7 +58,7 @@ The producer creates three topics:
 ## Monitor Kafka
 
 ### Using Kafka UI
-Open http://localhost:8080 in your browser to see:
+Open http://localhost:8082 in your browser to see:
 - Topics and their messages
 - Consumer groups
 - Broker information
