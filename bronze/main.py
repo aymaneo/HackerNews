@@ -10,7 +10,7 @@ import os
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from bronze.spark_loader import SparkBronzeLoader
+from spark_loader import SparkBronzeLoader
 
 
 def main():
@@ -22,7 +22,7 @@ def main():
     # Initialize Bronze loader
     loader = SparkBronzeLoader(
         bronze_path="data/bronze",
-        kafka_servers="localhost:9092"
+        kafka_servers="kafka:9092"
     )
 
     try:

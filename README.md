@@ -33,7 +33,7 @@ python3 run_spark_silver.py
 
 
 ### Kafka UI
-Open in browser: **http://localhost:8080**
+Open in browser: **http://localhost:8082**
 - View topics: `hn-stories`, `hn-comments`
 
 ### Query Delta Lake (Jupyter Notebook)
