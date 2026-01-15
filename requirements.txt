@@ -7,16 +7,22 @@ requests==2.31.0
 # Data processing
 pandas==2.1.4
 numpy==1.26.2
+pyarrow==14.0.1
 
-# Visualization
-seaborn==0.13.0
-matplotlib==3.8.2
-
-# Spark (will be installed in Docker, but useful for local development)
+# Spark
 pyspark==3.5.0
 
 # Delta Lake
 delta-spark==3.0.0
 
+# Visualization
+seaborn==0.13.0
+matplotlib==3.8.2
+
 # Utilities
 python-dotenv==1.0.0
+
+# Jupyter (for explore_data.ipynb)
+jupyter==1.0.0
+notebook==7.0.6
+ipykernel==6.29.0

@@ -1,64 +1,106 @@
-# Hacker News Data Pipeline with Spark NLP
-
-Big Data project for analyzing Hacker News stories and comments using Apache Spark, Kafka, Delta Lake, and Spark NLP.
+# Hacker News 
 
 ## Quick Start
 
-### 1. Install Dependencies
-
+### Option 1: One Command (Easiest!)
 ```bash
-source .venv/bin/activate
+./run_pipeline.sh
+```
+This will install dependencies, start Kafka, fetch data, and run both Bronze and Silver layers.
+
+### Option 2: Step by Step
+```bash
+# 1. Install dependencies
 pip install -r requirements.txt
-```
 
-### 2. Start Kafka Infrastructure
-
-```bash
+# 2. Start Kafka
 docker-compose up -d
+sleep 15
+
+# 3. Fetch data from HN API → Kafka
+python3 utils/kafka_producer.py --mode top
+
+# 4. Load Kafka → Bronze Delta Lake
+python3 run_spark_bronze.py
+
+# 5. Clean Bronze → Silver Delta Lake
+python3 run_spark_silver.py
 ```
 
-This starts:
-- Zookeeper (port 2181)
-- Kafka (port 9092)
-- Kafka UI (http://localhost:8080)
 
-### 3. Test Hacker News API Client
+---
 
+
+
+### Kafka UI
+Open in browser: **http://localhost:8080**
+- View topics: `hn-stories`, `hn-comments`
+
+### Query Delta Lake (Jupyter Notebook)
 ```bash
-python hn_api_client.py
+jupyter notebook explore_data.ipynb
 ```
 
-This will fetch the top 5 stories and display their details.
+---
 
-### 4. Run Kafka Producer
+## 🏗️ Architecture
 
-**One-time fetch (top stories):**
-```bash
-python kafka_producer.py --mode top
+```
+HN API → Kafka Producer → Kafka Topics
+                             ↓
+                    ┌────────────────┐
+                    │  BRONZE Layer  │  ← Spark + Delta Lake
+                    │  (Raw Data)    │     • Kafka → Delta
+                    └────────────────┘     • ACID writes
+                             ↓
+                    ┌────────────────┐
+                    │  SILVER Layer  │  ← Spark + Delta Lake
+                    │  (Clean Data)  │     • HTML cleaning
+                    └────────────────┘     • Quality scoring
 ```
 
-**One-time fetch (new stories):**
-```bash
-python kafka_producer.py --mode new
+---
+
+## 📁 Project Structure
+
+```
+hackernews/
+├── config/
+│   └── config.py              # Configuration
+├── utils/
+│   ├── hn_api_client.py       # HN API client
+│   └── kafka_producer.py      # Producer (API → Kafka)
+├── bronze/
+│   └── spark_loader.py        # Bronze (Kafka → Delta) 
+├── silver/
+│   └── spark_processor.py     # Silver (Bronze → Silver) 
+├── data/
+│   ├── bronze/                # Bronze Delta tables
+│   │   ├── stories/
+│   │   └── comments/
+│   └── silver/                # Silver Delta tables
+│       ├── stories/
+│       └── comments/
+├── docker-compose.yml         # Kafka infrastructure
+├── requirements.txt
+├── run_pipeline.sh            # One-command launcher
+├── run_spark_bronze.py        # Run Bronze layer
+├── run_spark_silver.py        # Run Silver layer
+├── test_delta.py              # Test Delta Lake
+└── explore_data.ipynb         # Query data (Jupyter)
 ```
 
-**Continuous mode:**
-```bash
-python kafka_producer.py --mode top --continuous
-```
+---
 
-## Kafka Topics
+## Data Schema
 
-The producer creates three topics:
+### Bronze Layer (Raw from Kafka)
+**Stories**: id, by, title, url, score, descendants, time, type, text, kids, _kafka_offset, _kafka_partition, _bronze_ingested_at
 
-- `hn-stories`: Story items from Hacker News
-- `hn-comments`: Comments on stories
-- `hn-users`: User profile data
+**Comments**: id, by, parent, story_id, text, time, type, kids, deleted, dead, _kafka_offset, _kafka_partition, _bronze_ingested_at
 
-## Monitor Kafka
+### Silver Layer (Cleaned)
+**Stories**: id, author, title, url, score, comment_count, timestamp, text_raw, text_clean, has_url, has_text, type
 
-### Using Kafka UI
-Open http://localhost:8080 in your browser to see:
-- Topics and their messages
-- Consumer groups
-- Broker information
+**Comments**: id, author, story_id, parent, timestamp, text_raw, text_clean, has_text, word_count, char_count, has_replies, is_deleted, is_dead, quality_score, type
+
