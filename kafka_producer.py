@@ -6,7 +6,7 @@ Fetches data from HN API and sends it to Kafka topics
 import json
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 from confluent_kafka import Producer
 from hn_api_client import HackerNewsAPI
@@ -88,7 +88,7 @@ class HackerNewsProducer:
         """
         try:
             # Add metadata
-            value['_kafka_timestamp'] = datetime.utcnow().isoformat()
+            value['_kafka_timestamp'] = datetime.now(timezone.utc).isoformat()
 
             # Serialize to JSON
             value_bytes = json.dumps(value).encode('utf-8')
