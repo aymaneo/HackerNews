@@ -3,7 +3,6 @@
 ## Quick Start
 
 ```bash
-# 2. Start Kafka
 docker-compose up 
 ```
 
