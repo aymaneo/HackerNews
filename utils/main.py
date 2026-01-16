@@ -21,21 +21,31 @@ logger = logging.getLogger('hn-producer')
 producer = Producer({'bootstrap.servers': KAFKA_SERVERS})
 
 while True:
-    story_ids = requests.get(f'{HN_API}/topstories.json', timeout=10).json()[:30]
+    try:
+        story_ids = requests.get(f'{HN_API}/topstories.json', timeout=10).json()[:30]
 
-    for story_id in story_ids:
-        story = requests.get(f'{HN_API}/item/{story_id}.json', timeout=10).json()
-        if not story or story.get('type') != 'story':
-            continue
+        for story_id in story_ids:
+            try:
+                story = requests.get(f'{HN_API}/item/{story_id}.json', timeout=10).json()
+                if not story or story.get('type') != 'story':
+                    continue
 
-        producer.produce('hn-stories', key=str(story_id).encode(), value=json.dumps(story).encode())
-        logger.info("Story produced: %s", story.get('title'))
+                producer.produce('hn-stories', key=str(story_id).encode(), value=json.dumps(story).encode())
+                logger.info("Story produced: %s", story.get('title'))
 
-        for comment_id in story.get('kids', [])[:50]:
-            comment = requests.get(f'{HN_API}/item/{comment_id}.json', timeout=10).json()
-            if comment:
-                producer.produce('hn-comments', key=str(comment_id).encode(), value=json.dumps(comment).encode())
+                for comment_id in story.get('kids', [])[:50]:
+                    try:
+                        comment = requests.get(f'{HN_API}/item/{comment_id}.json', timeout=10).json()
+                        if comment:
+                            producer.produce('hn-comments', key=str(comment_id).encode(), value=json.dumps(comment).encode())
+                    except requests.RequestException:
+                        continue
+            except requests.RequestException:
+                continue
 
-    producer.flush()
+        producer.flush()
+    except requests.RequestException as e:
+        logger.warning("API error: %s", e)
+
     logger.info("Waiting %ss...", FETCH_INTERVAL)
     time.sleep(FETCH_INTERVAL)
