@@ -108,7 +108,8 @@ services:
       dockerfile: Dockerfile
     container_name: bronze-processor
     volumes:
-      - ./bronze:/code
+      - ./bronze:/code/
+      - ./processor_common:/code/processor_common
     depends_on:
       - kafka-init-job
     networks:
@@ -121,6 +122,7 @@ services:
     container_name: silver-processor
     volumes:
       - ./silver:/code
+      - ./processor_common:/code/processor_common
     depends_on:
       - bronze-processor
 

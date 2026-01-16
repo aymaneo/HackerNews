@@ -11,6 +11,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from spark_processor import SparkSilverProcessor
+from processor_common.test import a
 
 
 def main():

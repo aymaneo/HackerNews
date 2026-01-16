@@ -10,7 +10,6 @@ from pyspark.sql.types import (
     StructType, StructField, StringType, IntegerType,
     BooleanType, ArrayType, LongType
 )
-from datetime import datetime
 import os
 from delta import configure_spark_with_delta_pip
 
