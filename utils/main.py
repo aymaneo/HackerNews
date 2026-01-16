@@ -6,14 +6,15 @@ Fetches data from HN API and sends it to Kafka topics
 import json
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from confluent_kafka import Producer
-from utils.hn_api_client import HackerNewsAPI
-from config.config import (
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from hn_api_client import HackerNewsAPI
+from config import (
     KAFKA_BOOTSTRAP_SERVERS,
     KAFKA_TOPICS,
     FETCH_INTERVAL_SECONDS,
@@ -50,7 +51,7 @@ class HackerNewsProducer:
                 'bootstrap.servers': ','.join(KAFKA_BOOTSTRAP_SERVERS),
                 'client.id': 'hackernews-producer',
                 'acks': 'all',
-                'retries': 3,
+                'retries': 10,
                 'max.in.flight.requests.per.connection': 1
             }
             producer = Producer(config)
@@ -91,7 +92,7 @@ class HackerNewsProducer:
         """
         try:
             # Add metadata
-            value['_kafka_timestamp'] = datetime.utcnow().isoformat()
+            value['_kafka_timestamp'] = datetime.now(timezone.utc).isoformat()
 
             # Serialize to JSON
             value_bytes = json.dumps(value).encode('utf-8')
