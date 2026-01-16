@@ -139,9 +139,7 @@ services:
 
 volumes:
   garage-meta:
-    external: true
   garage-data:
-    external: true
 
 networks:
   hackernews-network:

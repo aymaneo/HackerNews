@@ -9,6 +9,12 @@ docker-compose up
 
 ---
 
+### Garage UI
+Open in browser: **http://localhost:3909/**
+
+### Spark UI
+Open in browser: **http://localhost:8080/ui**
+
 ### Kafka UI
 Open in browser: **http://localhost:8082**
 - View topics: `hn-stories`, `hn-comments`
