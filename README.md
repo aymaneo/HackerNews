@@ -3,7 +3,9 @@
 ## Quick Start
 
 ```bash
-docker-compose up 
+docker volume create garage-meta
+docker volume create garage-data
+docker-compose up -d
 ```
 
 
