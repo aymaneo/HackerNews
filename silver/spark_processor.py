@@ -74,13 +74,6 @@ class SparkSilverProcessor:
         """Create Spark session with Delta Lake support"""
         logger.info("Creating Spark session with Delta Lake...")
 
-        # Set Java options for Java 23 compatibility
-        os.environ['PYSPARK_SUBMIT_ARGS'] = (
-            '--conf spark.driver.extraJavaOptions="-Djava.security.manager=allow" '
-            '--conf spark.executor.extraJavaOptions="-Djava.security.manager=allow" '
-            'pyspark-shell'
-        )
-
         # Configure Spark with Delta Lake
         builder = SparkSession.builder \
             .appName("HN Silver Processor - Delta Lake") \
@@ -88,8 +81,6 @@ class SparkSilverProcessor:
             .config("spark.jars.packages", "io.delta:delta-spark_2.12:3.0.0") \
             .config("spark.sql.adaptive.enabled", "true") \
             .config("spark.sql.shuffle.partitions", "4") \
-            .config("spark.driver.extraJavaOptions", "-Djava.security.manager=allow") \
-            .config("spark.executor.extraJavaOptions", "-Djava.security.manager=allow") \
             .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
             .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
 

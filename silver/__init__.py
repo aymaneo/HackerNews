@@ -1,2 +1,2 @@
 """Silver layer package - Data cleaning and transformation"""
-from .processor import SilverProcessor
+from .spark_processor import SparkSilverProcessor
