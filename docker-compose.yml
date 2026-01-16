@@ -20,7 +20,6 @@ services:
     ports:
       - "9092:9092"
       - "29092:29092"
-      - "9101:9101"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
@@ -54,6 +53,22 @@ services:
     networks:
       - hackernews-network
 
+  notebook:
+    build:
+      context: ./notebooks
+      dockerfile: Dockerfile
+    container_name: jupyter
+    ports:
+      - "8888:8888"
+      - "4040:4040"
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+    command: start-notebook.py --NotebookApp.token=''
+    volumes:
+      - ./notebooks:/home/jovyan/work
+    networks:
+      - hackernews-network
+
   spark:
     image: grosinosky/spark:3.5.3
     environment:
@@ -66,15 +81,16 @@ services:
     ports:
       - '8080:8080'
       - '7077:7077'
-      - '18888:8888'
+    networks:
+      - hackernews-network
 
   spark-worker:
     image: grosinosky/spark:3.5.3
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark:7077
-      - SPARK_WORKER_MEMORY=1G # can be changed
-      - SPARK_WORKER_CORES=3 # can be changed
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=2
       - SPARK_RPC_AUTHENTICATION_ENABLED=no
       - SPARK_RPC_ENCRYPTION_ENABLED=no
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
@@ -82,24 +98,27 @@ services:
       - SPARK_USER=spark
     ports:
       - '8081:8081'
+    networks:
+      - hackernews-network
 
   garage:
     image: grosinosky/garage:v2.1.0
     container_name: garage
     ports:
-      - "3900:3900"  # S3 API
-      - "3901:3901"  # RPC API
-      - "3902:3902"  # s3 web
-      - "3903:3903"  # admin API
+      - "3900:3900"
+      - "3901:3901"
+      - "3902:3902"
+      - "3903:3903"
     environment:
-      # Garage configuration
       RUST_LOG: garage=info
     volumes:
       - garage-data:/var/lib/garage/data
       - garage-meta:/var/lib/garage/meta
     restart: unless-stopped
+    networks:
+      - hackernews-network
 
-  webui:
+  garage-webui:
     image: khairul169/garage-webui:1.1.0
     container_name: garage-webui
     restart: unless-stopped
@@ -109,36 +128,14 @@ services:
       API_BASE_URL: "http://garage:3903"
       API_ADMIN_KEY: "changeme1234567890"
       S3_ENDPOINT_URL: "http://garage:3900"
-
-  bronze-processor:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: bronze-processor
-    volumes:
-      - ./bronze:/code/
-      - ./processor_common:/code/processor_common
-    depends_on:
-      - kafka-init-job
     networks:
       - hackernews-network
 
-  silver-processor:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: silver-processor
-    volumes:
-      - ./silver:/code
-      - ./processor_common:/code/processor_common
-    depends_on:
-      - bronze-processor
-
-  kafka-init-job:
+  hn-producer:
     build:
       context: ./
       dockerfile: utils/Dockerfile
-    container_name: kafka-job
+    container_name: hn-producer
     depends_on:
       kafka:
         condition: service_healthy
