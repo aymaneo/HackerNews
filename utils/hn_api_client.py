@@ -2,15 +2,16 @@
 Hacker News API Client
 Fetches stories, comments, and user data from the HN API
 """
+import logging
+from typing import Optional, Dict, List
 
 import requests
 import time
-from typing import Dict, List, Optional
-import logging
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config.config import HN_API_ENDPOINTS, REQUEST_DELAY_SECONDS
+
+from config import HN_API_ENDPOINTS, REQUEST_DELAY_SECONDS
 
 logging.basicConfig(
     level=logging.INFO,

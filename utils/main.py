@@ -10,10 +10,11 @@ from datetime import datetime, timezone
 from typing import Dict
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from confluent_kafka import Producer
-from utils.hn_api_client import HackerNewsAPI
-from config.config import (
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from hn_api_client import HackerNewsAPI
+from config import (
     KAFKA_BOOTSTRAP_SERVERS,
     KAFKA_TOPICS,
     FETCH_INTERVAL_SECONDS,

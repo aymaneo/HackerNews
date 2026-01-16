@@ -2,8 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /code
 
-COPY requirements.txt .
+COPY ./utils .
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["ls"]
-#CMD ["python3", "main.py"]
+CMD ["python3", "main.py"]

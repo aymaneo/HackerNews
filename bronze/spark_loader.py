@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class SparkBronzeLoader:
     """Spark-based Bronze layer loader - ingests data from Kafka to Parquet"""
 
-    def __init__(self, bronze_path: str = "data/bronze", kafka_servers: str = "kafka:9092"):
+    def __init__(self, bronze_path: str = "data/bronze", kafka_servers: str = "kafka:29092"):
         """
         Initialize Spark Bronze Loader
 
