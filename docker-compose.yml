@@ -19,16 +19,24 @@ services:
       - zookeeper
     ports:
       - "9092:9092"
+      - "29092:29092"
       - "9101:9101"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_LOG_RETENTION_HOURS: 168
+    healthcheck:
+      test: ["CMD", "/usr/bin/kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     networks:
       - hackernews-network
 
@@ -41,7 +49,7 @@ services:
       - "8082:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
     networks:
       - hackernews-network
@@ -133,9 +141,11 @@ services:
     container_name: kafka-job
     depends_on:
       kafka:
-        condition: service_started
+        condition: service_healthy
     networks:
       - hackernews-network
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
 volumes:
   garage-meta:

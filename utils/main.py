@@ -2,14 +2,21 @@
 """Kafka producer for Hacker News stories and comments."""
 
 import json
+import logging
 import os
 import time
 import requests
 from confluent_kafka import Producer
 
-KAFKA_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:29092')
+KAFKA_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
 FETCH_INTERVAL = int(os.getenv('FETCH_INTERVAL', '60'))
 HN_API = 'https://hacker-news.firebaseio.com/v0'
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+)
+logger = logging.getLogger('hn-producer')
 
 producer = Producer({'bootstrap.servers': KAFKA_SERVERS})
 
@@ -22,7 +29,7 @@ while True:
             continue
 
         producer.produce('hn-stories', key=str(story_id).encode(), value=json.dumps(story).encode())
-        print(f"Story: {story.get('title')}")
+        logger.info("Story produced: %s", story.get('title'))
 
         for comment_id in story.get('kids', [])[:50]:
             comment = requests.get(f'{HN_API}/item/{comment_id}.json', timeout=10).json()
@@ -30,5 +37,5 @@ while True:
                 producer.produce('hn-comments', key=str(comment_id).encode(), value=json.dumps(comment).encode())
 
     producer.flush()
-    print(f"Waiting {FETCH_INTERVAL}s...")
+    logger.info("Waiting %ss...", FETCH_INTERVAL)
     time.sleep(FETCH_INTERVAL)
