@@ -110,7 +110,9 @@ services:
     volumes:
       - ./bronze:/code
     depends_on:
-      - kafka-job
+      - kafka-init-job
+    networks:
+      - hackernews-network
 
   silver-processor:
     build:
@@ -122,13 +124,14 @@ services:
     depends_on:
       - bronze-processor
 
-  kafka-job:
+  kafka-init-job:
     build:
       context: ./
       dockerfile: utils/Dockerfile
     container_name: kafka-job
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
     networks:
       - hackernews-network
 

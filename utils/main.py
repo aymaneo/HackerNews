@@ -51,7 +51,7 @@ class HackerNewsProducer:
                 'bootstrap.servers': ','.join(KAFKA_BOOTSTRAP_SERVERS),
                 'client.id': 'hackernews-producer',
                 'acks': 'all',
-                'retries': 3,
+                'retries': 10,
                 'max.in.flight.requests.per.connection': 1
             }
             producer = Producer(config)

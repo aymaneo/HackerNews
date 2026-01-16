@@ -7,10 +7,9 @@ import logging
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
     col, udf, when, length, size, coalesce, lit,
-    from_unixtime, regexp_replace, split, current_timestamp
+    from_unixtime, split
 )
-from pyspark.sql.types import StringType, BooleanType, IntegerType, FloatType
-from datetime import datetime
+from pyspark.sql.types import StringType, IntegerType
 import os
 import re
 from html import unescape as html_unescape
