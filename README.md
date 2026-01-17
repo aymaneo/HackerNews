@@ -1,14 +1,29 @@
-# Hacker News 
+# Hacker News' API data processing pipeline
 
 ## Quick Start
+### First time Setup
+First, run garage once from the docker compose to set up the access keys
+```bash
+docker compose up -d garage-webui
+```
+Using garage UI available at **http://localhost:3909/** :
+1. Set up an access key 
+2. create a bucket named "bronze" accessed by that same access key. 
+3. then update the following environment of kafka-connect-setup in the docker compose:  
+   1. AWS_ACCESS_KEY_ID 
+   2. AWS_SECRET_ACCESS_KEY
 
+With this setup, garage will keep the access keys in its dedicated metadata folder.
+
+### Launch the project
+From the root run the following command :
 ```bash
 docker-compose up 
 ```
 
 
 ---
-
+## Available UIs
 ### Garage UI
 Open in browser: **http://localhost:3909/**
 
@@ -29,17 +44,17 @@ jupyter notebook explore_data.ipynb
 ## 🏗️ Architecture
 
 ```
-HN API → Kafka Producer → Kafka Topics
+HN API → Kafka Producer → Kafka 
                              ↓
                     ┌────────────────┐
-                    │  BRONZE Layer  │  ← Spark + Delta Lake
-                    │  (Raw Data)    │     • Kafka → Delta
-                    └────────────────┘     • ACID writes
-                             ↓
-                    ┌────────────────┐
-                    │  SILVER Layer  │  ← Spark + Delta Lake
-                    │  (Clean Data)  │     • HTML cleaning
-                    └────────────────┘     • Quality scoring
+                    │  BRONZE Layer  │
+                    │  (Raw Data)    │---------|
+                    └────────────────┘         |   ← Spark + Delta Lake
+                             ↓                 |      • HTML cleaning
+                    ┌────────────────┐         |      • aggregation
+                    │  SILVER Layer  │←--------|  
+                    │  (Clean Data)  │            
+                    └────────────────┘            
 ```
 
 ---
