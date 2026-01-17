@@ -31,12 +31,19 @@ services:
       KAFKA_LOG_RETENTION_HOURS: 168
     networks:
       - hackernews-network
+    healthcheck:
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092" ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8082:8080"
     environment:
@@ -74,6 +81,8 @@ services:
       - SPARK_USER=spark
     ports:
       - '8081:8081'
+    depends_on:
+      - spark
 
   garage:
     image: grosinosky/garage:v2.1.0
@@ -90,8 +99,10 @@ services:
       - garage-data:/var/lib/garage/data
       - garage-meta:/var/lib/garage/meta
     restart: unless-stopped
+    networks:
+      - hackernews-network
 
-  webui:
+  garage-webui:
     image: khairul169/garage-webui:1.1.0
     container_name: garage-webui
     restart: unless-stopped
@@ -101,19 +112,121 @@ services:
       API_BASE_URL: "http://garage:3903"
       API_ADMIN_KEY: "changeme1234567890"
       S3_ENDPOINT_URL: "http://garage:3900"
-
-  bronze-processor:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: bronze-processor
-    volumes:
-      - ./bronze:/code/
-      - ./processor_common:/code/processor_common
     depends_on:
-      - kafka-init-job
+      - garage
     networks:
       - hackernews-network
+
+  kafka-init-job:
+    build:
+      context: ./
+      dockerfile: utils/Dockerfile
+    container_name: kafka-job
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-connect-setup:
+        condition: service_completed_successfully
+      garage:
+        condition: service_started
+    networks:
+      - hackernews-network
+
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:7.5.0
+    hostname: kafka-connect
+    container_name: kafka-connect
+    depends_on:
+      kafka:
+        condition: service_healthy
+      garage:
+        condition: service_started
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: 'kafka:29092'
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: kafka-connect-s3
+      CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+      CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
+      AWS_ACCESS_KEY_ID: "GKfa508def1ce303cbcf7c716d"
+      AWS_SECRET_ACCESS_KEY: "b909152eeabfdc7ee998ea17d573fd7e3b1a436c80c9eca6d917753a5d4f18fd"
+      CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR"
+    networks:
+      - hackernews-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/connectors"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command:
+      - bash
+      - -c
+      - |
+        confluent-hub install --no-prompt confluentinc/kafka-connect-s3:10.5.0
+        /etc/confluent/docker/run
+
+  kafka-connect-setup:
+    image: confluentinc/cp-kafka-connect:7.5.0
+    container_name: kafka-connect-setup
+    depends_on:
+      kafka-connect:
+        condition: service_healthy
+    networks:
+      - hackernews-network
+    environment:
+      - CONNECT_URL=http://kafka-connect:8083
+      - AWS_ACCESS_KEY_ID=GKff6ba2b3455ca4194ebe34c1
+      - AWS_SECRET_ACCESS_KEY=81bd3b81dfe623301827b6fd5b9bea3fab1dea4aebac1e2793238655e37fe454
+      - S3_BUCKET=bronze
+      - S3_ENDPOINT=http://garage:3900
+    command:
+      - bash
+      - -c
+      - |
+        curl -X POST http://kafka-connect:8083/connectors -H "Content-Type: application/json" -d '{
+          "name": "s3-sink-hn-stories",
+          "config": {
+            "connector.class": "io.confluent.connect.s3.S3SinkConnector",
+            "tasks.max": "1",
+            "topics": "hn-stories",
+            "s3.bucket.name": "bronze",
+            "s3.region": "garage",
+            "flush.size": "100",
+            "storage.class": "io.confluent.connect.s3.storage.S3Storage",
+            "format.class": "io.confluent.connect.s3.format.json.JsonFormat",
+            "store.url": "http://garage:3900",
+            "s3.path.style.access.enabled": "true"
+          }
+        }'
+        curl -X POST http://kafka-connect:8083/connectors -H "Content-Type: application/json" -d '{
+          "name": "s3-sink-hn-comments",
+          "config": {
+            "connector.class": "io.confluent.connect.s3.S3SinkConnector",
+            "tasks.max": "1",
+            "storage.class": "io.confluent.connect.s3.storage.S3Storage",
+            "topics": "hn-comments",
+            "s3.bucket.name": "bronze",
+            "s3.region": "garage",
+            "flush.size": "100",
+            "format.class": "io.confluent.connect.s3.format.json.JsonFormat",
+            "store.url": "http://garage:3900",
+            "s3.path.style.access.enabled": "true"
+          }
+        }'
+    restart: "no"
 
   silver-processor:
     build:
@@ -124,16 +237,28 @@ services:
       - ./silver:/code
       - ./processor_common:/code/processor_common
     depends_on:
-      - bronze-processor
-
-  kafka-init-job:
-    build:
-      context: ./
-      dockerfile: utils/Dockerfile
-    container_name: kafka-job
-    depends_on:
-      kafka:
+      kafka-init-job:
+        condition: service_completed_successfully
+      kafka-connect-setup:
+        condition: service_completed_successfully
+      garage:
         condition: service_started
+      spark-worker:
+        condition: service_started
+    networks:
+      - hackernews-network
+
+  gold-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gold-processor
+    volumes:
+      - ./gold:/code
+      - ./processor_common:/code/processor_common
+    depends_on:
+      silver-processor:
+        condition: service_completed_successfully
     networks:
       - hackernews-network
 
