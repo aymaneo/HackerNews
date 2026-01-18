@@ -2,6 +2,7 @@
 
 ## Quick Start
 
+The Docker Compose file defines the `garage-meta` and `garage-data` volumes as **external** volumes, so they need to be created manually once before starting the stack:
 ```bash
 docker volume create garage-meta
 docker volume create garage-data
