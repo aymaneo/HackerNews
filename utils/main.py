@@ -17,6 +17,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger('hn-producer')
 
+# Track already-processed stories to avoid re-sending unchanged data
+processed_stories = {}  # {story_id: last_updated_timestamp}
+
 def delivery_callback(err, msg):
     """Callback function to track message delivery success/failure."""
     if err:
@@ -41,15 +44,37 @@ producer = Producer({
 while True:
     try:
         story_ids = requests.get(f'{HN_API}/topstories.json', timeout=10).json()[:30]
+        new_stories_count = 0
+        updated_stories_count = 0
+        
         for story_id in story_ids:
             try:
                 story = requests.get(f'{HN_API}/item/{story_id}.json', timeout=10).json()
                 if not story or story.get('type') != 'story':
                     continue
                 
+                # Check if story is new or has been updated since last fetch
+                story_time = story.get('time', 0)
+                last_seen_time = processed_stories.get(story_id, 0)
+                
+                if story_time <= last_seen_time:
+                    # Story hasn't changed, skip it
+                    logger.debug("Skipping unchanged story: %s", story.get('title'))
+                    continue
+                
+                # Story is new or updated, produce it to Kafka
                 producer.produce('hn-stories', key=str(story_id).encode(), 
                                 value=json.dumps(story).encode(), callback=delivery_callback)
-                logger.info("Story produced: %s", story.get('title'))
+                
+                if last_seen_time == 0:
+                    new_stories_count += 1
+                    logger.info("New story produced: %s", story.get('title'))
+                else:
+                    updated_stories_count += 1
+                    logger.info("Updated story produced: %s", story.get('title'))
+                
+                # Update processed stories tracker
+                processed_stories[story_id] = story_time
                 
                 for comment_id in story.get('kids', [])[:50]:
                     try:
@@ -63,6 +88,10 @@ while True:
             except requests.RequestException as e:
                 logger.warning("Failed to fetch story %s: %s", story_id, e)
                 continue
+        
+        logger.info("Batch complete: %d new stories, %d updated stories, %d skipped", 
+                   new_stories_count, updated_stories_count, 
+                   len(story_ids) - new_stories_count - updated_stories_count)
         
         try:
             producer.flush()
