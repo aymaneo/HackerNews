@@ -22,7 +22,10 @@ logger = logging.getLogger('hn-producer')
 def delivery_callback(err, msg):
     """Callback function to track message delivery success/failure."""
     if err:
-        topic = msg.topic() if msg else 'unknown'
+        try:
+            topic = msg.topic() if msg else 'unknown'
+        except (AttributeError, TypeError):
+            topic = 'unknown'
         logger.error("Message delivery failed: %s (topic=%s)", err, topic)
     else:
         logger.debug("Message delivered: topic=%s, partition=%s, offset=%s",
