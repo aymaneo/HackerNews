@@ -22,7 +22,7 @@ def main():
     # Initialize Bronze loader
     loader = SparkBronzeLoader(
         bronze_path="data/bronze",
-        kafka_servers="kafka:29092"
+        kafka_servers="kafka:9092"
     )
 
     try:
