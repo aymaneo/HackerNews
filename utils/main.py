@@ -45,7 +45,10 @@ while True:
                 logger.warning("Failed to fetch story %s: %s", story_id, e)
                 continue
 
-        producer.flush()
+        try:
+            producer.flush()
+        except Exception as e:
+            logger.error("Error while flushing Kafka producer: %s", e)
     except requests.RequestException as e:
         logger.warning("API error: %s", e)
 
