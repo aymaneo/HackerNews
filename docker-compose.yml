@@ -62,7 +62,7 @@ services:
       kafka:
         condition: service_healthy
       spark:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8888:8888"
       - "4040:4040"
@@ -87,7 +87,7 @@ services:
       - '8080:8080'
       - '7077:7077'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: ["CMD-SHELL", "nc -z localhost 7077 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
