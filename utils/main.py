@@ -46,6 +46,7 @@ while True:
         story_ids = requests.get(f'{HN_API}/topstories.json', timeout=10).json()[:30]
         new_stories_count = 0
         updated_stories_count = 0
+        skipped_stories_count = 0
         
         for story_id in story_ids:
             try:
@@ -57,9 +58,10 @@ while True:
                 story_time = story.get('time', 0)
                 last_seen_time = processed_stories.get(story_id, 0)
                 
-                if story_time <= last_seen_time:
+                if story_time < last_seen_time:
                     # Story hasn't changed, skip it
                     logger.debug("Skipping unchanged story: %s", story.get('title'))
+                    skipped_stories_count += 1
                     continue
                 
                 # Story is new or updated, produce it to Kafka
@@ -90,8 +92,7 @@ while True:
                 continue
         
         logger.info("Batch complete: %d new stories, %d updated stories, %d skipped", 
-                   new_stories_count, updated_stories_count, 
-                   len(story_ids) - new_stories_count - updated_stories_count)
+                   new_stories_count, updated_stories_count, skipped_stories_count)
         
         # Cleanup: remove stories that are no longer in the top 30 to prevent memory leak
         current_story_ids = set(story_ids)
