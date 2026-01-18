@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Kafka producer for Hacker News stories and comments."""
-
 import json
 import logging
 import os
@@ -18,7 +17,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger('hn-producer')
 
-
 def delivery_callback(err, msg):
     """Callback function to track message delivery success/failure."""
     if err:
@@ -31,7 +29,6 @@ def delivery_callback(err, msg):
         logger.debug("Message delivered: topic=%s, partition=%s, offset=%s",
                      msg.topic(), msg.partition(), msg.offset())
 
-
 producer = Producer({
     'bootstrap.servers': KAFKA_SERVERS,
     'acks': 'all',  # Wait for all in-sync replicas to acknowledge
@@ -43,17 +40,16 @@ producer = Producer({
 while True:
     try:
         story_ids = requests.get(f'{HN_API}/topstories.json', timeout=10).json()[:30]
-
         for story_id in story_ids:
             try:
                 story = requests.get(f'{HN_API}/item/{story_id}.json', timeout=10).json()
                 if not story or story.get('type') != 'story':
                     continue
-
+                
                 producer.produce('hn-stories', key=str(story_id).encode(), 
                                 value=json.dumps(story).encode(), callback=delivery_callback)
                 logger.info("Story produced: %s", story.get('title'))
-
+                
                 for comment_id in story.get('kids', [])[:50]:
                     try:
                         comment = requests.get(f'{HN_API}/item/{comment_id}.json', timeout=10).json()
@@ -64,12 +60,15 @@ while True:
                         logger.debug("Failed to fetch comment %s: %s", comment_id, e)
                         continue
             except requests.RequestException as e:
-                logger.debug("Failed to fetch story %s: %s", story_id, e)
+                logger.warning("Failed to fetch story %s: %s", story_id, e)
                 continue
-
-        producer.flush()
+        
+        try:
+            producer.flush()
+        except Exception as e:
+            logger.error("Error while flushing Kafka producer: %s", e)
     except requests.RequestException as e:
         logger.warning("API error: %s", e)
-
-    logger.info("Waiting %ss...", FETCH_INTERVAL)
-    time.sleep(FETCH_INTERVAL)
+    finally:
+        logger.info("Waiting %ss...", FETCH_INTERVAL)
+        time.sleep(FETCH_INTERVAL)
