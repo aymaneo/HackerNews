@@ -46,6 +46,6 @@ while True:
         producer.flush()
     except requests.RequestException as e:
         logger.warning("API error: %s", e)
-
-    logger.info("Waiting %ss...", FETCH_INTERVAL)
-    time.sleep(FETCH_INTERVAL)
+    finally:
+        logger.info("Waiting %ss...", FETCH_INTERVAL)
+        time.sleep(FETCH_INTERVAL)
