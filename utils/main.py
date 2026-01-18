@@ -38,9 +38,11 @@ while True:
                         comment = requests.get(f'{HN_API}/item/{comment_id}.json', timeout=10).json()
                         if comment:
                             producer.produce('hn-comments', key=str(comment_id).encode(), value=json.dumps(comment).encode())
-                    except requests.RequestException:
+                    except requests.RequestException as e:
+                        logger.warning("Failed to fetch comment %s: %s", comment_id, e)
                         continue
-            except requests.RequestException:
+            except requests.RequestException as e:
+                logger.warning("Failed to fetch story %s: %s", story_id, e)
                 continue
 
         producer.flush()
