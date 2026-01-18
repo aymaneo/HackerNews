@@ -18,7 +18,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger('hn-producer')
 
-producer = Producer({'bootstrap.servers': KAFKA_SERVERS})
+
+def delivery_callback(err, msg):
+    """Callback function to track message delivery success/failure."""
+    if err:
+        logger.error("Message delivery failed: %s (topic=%s, partition=%s, offset=%s)",
+                     err, msg.topic(), msg.partition(), msg.offset())
+    else:
+        logger.debug("Message delivered: topic=%s, partition=%s, offset=%s",
+                     msg.topic(), msg.partition(), msg.offset())
+
+
+producer = Producer({
+    'bootstrap.servers': KAFKA_SERVERS,
+    'acks': 'all',  # Wait for all in-sync replicas to acknowledge
+    'retries': 3,  # Retry up to 3 times on transient errors
+    'max.in.flight.requests.per.connection': 5,  # Max unacknowledged requests
+    'compression.type': 'snappy',  # Enable compression for better throughput
+})
 
 while True:
     try:
@@ -30,14 +47,16 @@ while True:
                 if not story or story.get('type') != 'story':
                     continue
 
-                producer.produce('hn-stories', key=str(story_id).encode(), value=json.dumps(story).encode())
+                producer.produce('hn-stories', key=str(story_id).encode(), 
+                                value=json.dumps(story).encode(), callback=delivery_callback)
                 logger.info("Story produced: %s", story.get('title'))
 
                 for comment_id in story.get('kids', [])[:50]:
                     try:
                         comment = requests.get(f'{HN_API}/item/{comment_id}.json', timeout=10).json()
                         if comment:
-                            producer.produce('hn-comments', key=str(comment_id).encode(), value=json.dumps(comment).encode())
+                            producer.produce('hn-comments', key=str(comment_id).encode(), 
+                                            value=json.dumps(comment).encode(), callback=delivery_callback)
                     except requests.RequestException:
                         continue
             except requests.RequestException:
