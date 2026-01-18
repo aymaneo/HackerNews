@@ -58,7 +58,7 @@ while True:
                 story_time = story.get('time', 0)
                 last_seen_time = processed_stories.get(story_id, 0)
                 
-                if story_time < last_seen_time:
+                if story_time <= last_seen_time:
                     # Story hasn't changed, skip it
                     logger.debug("Skipping unchanged story: %s", story.get('title'))
                     skipped_stories_count += 1
