@@ -93,6 +93,14 @@ while True:
                    new_stories_count, updated_stories_count, 
                    len(story_ids) - new_stories_count - updated_stories_count)
         
+        # Cleanup: remove stories that are no longer in the top 30 to prevent memory leak
+        current_story_ids = set(story_ids)
+        old_story_ids = set(processed_stories.keys()) - current_story_ids
+        for old_id in old_story_ids:
+            del processed_stories[old_id]
+        if old_story_ids:
+            logger.debug("Cleaned up %d old story IDs from tracking", len(old_story_ids))
+        
         try:
             producer.flush()
         except Exception as e:
