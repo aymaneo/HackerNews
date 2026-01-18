@@ -22,8 +22,7 @@ logger = logging.getLogger('hn-producer')
 def delivery_callback(err, msg):
     """Callback function to track message delivery success/failure."""
     if err:
-        logger.error("Message delivery failed: %s (topic=%s, partition=%s, offset=%s)",
-                     err, msg.topic(), msg.partition(), msg.offset())
+        logger.error("Message delivery failed: %s (topic=%s)", err, msg.topic())
     else:
         logger.debug("Message delivered: topic=%s, partition=%s, offset=%s",
                      msg.topic(), msg.partition(), msg.offset())
@@ -57,9 +56,11 @@ while True:
                         if comment:
                             producer.produce('hn-comments', key=str(comment_id).encode(), 
                                             value=json.dumps(comment).encode(), callback=delivery_callback)
-                    except requests.RequestException:
+                    except requests.RequestException as e:
+                        logger.debug("Failed to fetch comment %s: %s", comment_id, e)
                         continue
-            except requests.RequestException:
+            except requests.RequestException as e:
+                logger.debug("Failed to fetch story %s: %s", story_id, e)
                 continue
 
         producer.flush()
