@@ -35,6 +35,7 @@ producer = Producer({
     'retries': 3,  # Retry up to 3 times on transient errors
     'max.in.flight.requests.per.connection': 5,  # Max unacknowledged requests
     'compression.type': 'snappy',  # Enable compression for better throughput
+    'enable.idempotence': True,  # Prevent duplicates during retries
 })
 
 while True:
@@ -57,7 +58,7 @@ while True:
                             producer.produce('hn-comments', key=str(comment_id).encode(), 
                                             value=json.dumps(comment).encode(), callback=delivery_callback)
                     except requests.RequestException as e:
-                        logger.debug("Failed to fetch comment %s: %s", comment_id, e)
+                        logger.warning("Failed to fetch comment %s: %s", comment_id, e)
                         continue
             except requests.RequestException as e:
                 logger.warning("Failed to fetch story %s: %s", story_id, e)
