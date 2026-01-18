@@ -51,6 +51,6 @@ while True:
             logger.error("Error while flushing Kafka producer: %s", e)
     except requests.RequestException as e:
         logger.warning("API error: %s", e)
-
-    logger.info("Waiting %ss...", FETCH_INTERVAL)
-    time.sleep(FETCH_INTERVAL)
+    finally:
+        logger.info("Waiting %ss...", FETCH_INTERVAL)
+        time.sleep(FETCH_INTERVAL)
