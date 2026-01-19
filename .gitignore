@@ -15,9 +15,7 @@ spark-warehouse/
 derby.log
 
 # Data
-data/bronze/
-data/silver/
-data/gold/
+**/data/
 *.parquet
 *.csv
 
