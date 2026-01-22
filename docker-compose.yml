@@ -62,7 +62,7 @@ services:
       kafka:
         condition: service_healthy
       spark:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "8888:8888"
       - "4040:4040"
@@ -86,12 +86,6 @@ services:
     ports:
       - '8080:8080'
       - '7077:7077'
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 7077 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
     networks:
       - hackernews-network
 
@@ -99,7 +93,7 @@ services:
     image: grosinosky/spark:3.5.3
     depends_on:
       spark:
-        condition: service_healthy
+        condition: service_started
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark:7077

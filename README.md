@@ -9,6 +9,7 @@ docker volume create garage-data
 docker-compose up -d
 ```
 
+Don't forget to create your access key, secret key and buckets before launching a notebook, in the Garage UI interface !
 
 ---
 
