@@ -8,8 +8,9 @@ import requests
 from confluent_kafka import Producer
 
 KAFKA_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
-FETCH_INTERVAL = int(os.getenv('FETCH_INTERVAL', '60'))
+FETCH_INTERVAL = int(os.getenv('FETCH_INTERVAL', '120'))
 HN_API = 'https://hacker-news.firebaseio.com/v0'
+MAX_COMMENTS_PER_STORY = 20
 
 seen_stories = set()
 seen_comments = set()
@@ -58,10 +59,9 @@ while True:
                 seen_stories.add(story_id)
                 logger.info("Story produced: %s", story.get('title'))
 
-                for comment_id in story.get('kids', [])[:50]:
+                for comment_id in story.get('kids', [])[:MAX_COMMENTS_PER_STORY]:
                     if comment_id in seen_comments:
                         continue
-
                     try:
                         comment = requests.get(f'{HN_API}/item/{comment_id}.json', timeout=10).json()
                         if comment:
