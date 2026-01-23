@@ -11,6 +11,9 @@ KAFKA_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
 FETCH_INTERVAL = int(os.getenv('FETCH_INTERVAL', '60'))
 HN_API = 'https://hacker-news.firebaseio.com/v0'
 
+seen_stories = set()
+seen_comments = set()
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
@@ -42,28 +45,36 @@ while True:
     try:
         story_ids = requests.get(f'{HN_API}/topstories.json', timeout=10).json()[:30]
         for story_id in story_ids:
+            if story_id in seen_stories:
+                continue
+
             try:
                 story = requests.get(f'{HN_API}/item/{story_id}.json', timeout=10).json()
                 if not story or story.get('type') != 'story':
                     continue
-                
-                producer.produce('hn-stories', key=str(story_id).encode(), 
+
+                producer.produce('hn-stories', key=str(story_id).encode(),
                                 value=json.dumps(story).encode(), callback=delivery_callback)
+                seen_stories.add(story_id)
                 logger.info("Story produced: %s", story.get('title'))
-                
+
                 for comment_id in story.get('kids', [])[:50]:
+                    if comment_id in seen_comments:
+                        continue
+
                     try:
                         comment = requests.get(f'{HN_API}/item/{comment_id}.json', timeout=10).json()
                         if comment:
-                            producer.produce('hn-comments', key=str(comment_id).encode(), 
+                            producer.produce('hn-comments', key=str(comment_id).encode(),
                                             value=json.dumps(comment).encode(), callback=delivery_callback)
+                            seen_comments.add(comment_id)
                     except requests.RequestException as e:
                         logger.warning("Failed to fetch comment %s: %s", comment_id, e)
                         continue
             except requests.RequestException as e:
                 logger.warning("Failed to fetch story %s: %s", story_id, e)
                 continue
-        
+
         try:
             producer.flush()
         except Exception as e:
