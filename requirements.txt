@@ -10,10 +10,10 @@ numpy==1.26.2
 pyarrow==14.0.1
 
 # Spark
-pyspark==3.5.0
+pyspark==3.5.3
 
 # Delta Lake
-delta-spark==3.0.0
+delta-spark==3.3.0
 
 # Visualization
 seaborn==0.13.0
