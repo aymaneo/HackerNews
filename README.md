@@ -6,6 +6,7 @@ The Docker Compose file defines the `garage-meta` and `garage-data` volumes as *
 ```bash
 docker volume create garage-meta
 docker volume create garage-data
+docker compose build hn-producer
 docker-compose up -d
 ```
 
