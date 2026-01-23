@@ -11,8 +11,8 @@ from deltalake import DeltaTable
 
 # Configuration
 GARAGE_ENDPOINT = os.getenv("GARAGE_ENDPOINT", "http://garage:3900")
-GARAGE_ACCESS_KEY = os.getenv("GARAGE_ACCESS_KEY", "GK907b22f51dc0d0c5164474f2")
-GARAGE_SECRET_KEY = os.getenv("GARAGE_SECRET_KEY", "6cf587853042d92d2cf6bb85b7c46a6a2400a47822e9baae32f9be0b7c5c9663")
+GARAGE_ACCESS_KEY = os.getenv("GARAGE_ACCESS_KEY", "GK2ae23cad2bbbf648143b1b8c")
+GARAGE_SECRET_KEY = os.getenv("GARAGE_SECRET_KEY", "997e31832cbc9c78a2d919897f1cc9d63ad2c628464a7fba3a55f972c31790ee")
 GOLD_PATH = os.getenv("GOLD_PATH", "s3://gold/hackernews")
 REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", "30"))
 
