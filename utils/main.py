@@ -8,9 +8,10 @@ import requests
 from confluent_kafka import Producer
 
 KAFKA_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:9092')
-FETCH_INTERVAL = int(os.getenv('FETCH_INTERVAL', '120'))
+FETCH_INTERVAL = int(os.getenv('FETCH_INTERVAL', '90'))
 HN_API = 'https://hacker-news.firebaseio.com/v0'
-MAX_COMMENTS_PER_STORY = 20
+MAX_STORIES = 100
+MAX_COMMENTS_PER_STORY = 30
 
 seen_stories = set()
 seen_comments = set()
@@ -44,7 +45,7 @@ producer = Producer({
 
 while True:
     try:
-        story_ids = requests.get(f'{HN_API}/topstories.json', timeout=10).json()[:30]
+        story_ids = requests.get(f'{HN_API}/topstories.json', timeout=10).json()[:MAX_STORIES]
         for story_id in story_ids:
             if story_id in seen_stories:
                 continue
