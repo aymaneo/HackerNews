@@ -6,15 +6,25 @@ Visualisation des données Gold Layer (Sentiment, NER, Keywords)
 import streamlit as st
 import pandas as pd
 import time
-from pyspark.sql import SparkSession
 import os
+from deltalake import DeltaTable
 
 # Configuration
 GARAGE_ENDPOINT = os.getenv("GARAGE_ENDPOINT", "http://garage:3900")
 GARAGE_ACCESS_KEY = os.getenv("GARAGE_ACCESS_KEY", "GK907b22f51dc0d0c5164474f2")
 GARAGE_SECRET_KEY = os.getenv("GARAGE_SECRET_KEY", "6cf587853042d92d2cf6bb85b7c46a6a2400a47822e9baae32f9be0b7c5c9663")
-GOLD_PATH = os.getenv("GOLD_PATH", "s3a://gold/hackernews")
+GOLD_PATH = os.getenv("GOLD_PATH", "s3://gold/hackernews")
 REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", "30"))
+
+# S3 storage options for deltalake
+STORAGE_OPTIONS = {
+    "AWS_ENDPOINT_URL": GARAGE_ENDPOINT,
+    "AWS_ACCESS_KEY_ID": GARAGE_ACCESS_KEY,
+    "AWS_SECRET_ACCESS_KEY": GARAGE_SECRET_KEY,
+    "AWS_REGION": "garage",
+    "AWS_S3_ALLOW_UNSAFE_RENAME": "true",
+    "AWS_ALLOW_HTTP": "true",
+}
 
 st.set_page_config(
     page_title="HackerNews Analytics",
@@ -23,35 +33,11 @@ st.set_page_config(
 )
 
 
-@st.cache_resource
-def get_spark():
-    """Initialize Spark session with Delta Lake and S3 support."""
-    spark = SparkSession.builder \
-        .appName("HackerNews-Dashboard") \
-        .master("local[*]") \
-        .config("spark.jars.packages",
-                "org.apache.hadoop:hadoop-aws:3.3.4,"
-                "com.amazonaws:aws-java-sdk-bundle:1.12.262,"
-                "io.delta:delta-spark_2.12:3.3.0") \
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-        .config("spark.hadoop.fs.s3a.endpoint", GARAGE_ENDPOINT) \
-        .config("spark.hadoop.fs.s3a.access.key", GARAGE_ACCESS_KEY) \
-        .config("spark.hadoop.fs.s3a.secret.key", GARAGE_SECRET_KEY) \
-        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
-        .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
-        .config("spark.driver.memory", "2g") \
-        .getOrCreate()
-
-    return spark
-
-
-def load_delta_table(spark, table_name: str) -> pd.DataFrame:
+def load_delta_table(table_name: str) -> pd.DataFrame:
     """Load a Delta table and convert to Pandas."""
     try:
-        df = spark.read.format("delta").load(f"{GOLD_PATH}/{table_name}")
-        return df.toPandas()
+        dt = DeltaTable(f"{GOLD_PATH}/{table_name}", storage_options=STORAGE_OPTIONS)
+        return dt.to_pandas()
     except Exception as e:
         st.warning(f"Table '{table_name}' non disponible: {e}")
         return pd.DataFrame()
@@ -60,8 +46,6 @@ def load_delta_table(spark, table_name: str) -> pd.DataFrame:
 def main():
     st.title("HackerNews Analytics Dashboard")
     st.caption(f"Rafraichissement automatique toutes les {REFRESH_INTERVAL}s")
-
-    spark = get_spark()
 
     # Tabs pour organiser les visualisations
     tab1, tab2, tab3, tab4 = st.tabs([
@@ -75,7 +59,7 @@ def main():
     with tab1:
         st.header("Sentiment des commentaires (streaming)")
 
-        sentiment_rt = load_delta_table(spark, "sentiment_real_time")
+        sentiment_rt = load_delta_table("sentiment_real_time")
 
         if not sentiment_rt.empty:
             col1, col2, col3 = st.columns(3)
@@ -103,7 +87,7 @@ def main():
     with tab2:
         st.header("Sentiment par domaine source")
 
-        sentiment_domain = load_delta_table(spark, "sentiment_by_domain")
+        sentiment_domain = load_delta_table("sentiment_by_domain")
 
         if not sentiment_domain.empty:
             col1, col2 = st.columns([2, 1])
@@ -128,7 +112,7 @@ def main():
     with tab3:
         st.header("Entités nommées extraites (NER)")
 
-        entities = load_delta_table(spark, "entities")
+        entities = load_delta_table("entities")
 
         if not entities.empty:
             col1, col2 = st.columns(2)
@@ -157,7 +141,7 @@ def main():
 
         with col1:
             st.subheader("Batch (Top 50)")
-            keywords = load_delta_table(spark, "keywords")
+            keywords = load_delta_table("keywords")
             if not keywords.empty:
                 st.bar_chart(keywords.head(25).set_index("keyword")["count"])
             else:
@@ -165,7 +149,7 @@ def main():
 
         with col2:
             st.subheader("Temps réel (fenêtre glissante)")
-            keywords_rt = load_delta_table(spark, "keywords_real_time")
+            keywords_rt = load_delta_table("keywords_real_time")
             if not keywords_rt.empty:
                 st.dataframe(keywords_rt.head(20), hide_index=True)
             else:
