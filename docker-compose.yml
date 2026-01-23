@@ -152,6 +152,24 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: dashboard
+    depends_on:
+      - garage
+    ports:
+      - "8501:8501"
+    environment:
+      GARAGE_ENDPOINT: "http://garage:3900"
+      GARAGE_ACCESS_KEY: "GK907b22f51dc0d0c5164474f2"
+      GARAGE_SECRET_KEY: "6cf587853042d92d2cf6bb85b7c46a6a2400a47822e9baae32f9be0b7c5c9663"
+      GOLD_PATH: "s3a://gold/hackernews"
+      REFRESH_INTERVAL: "30"
+    networks:
+      - hackernews-network
+
 volumes:
   garage-meta:
   garage-data:
